@@ -1,0 +1,509 @@
+import 'package:flutter/material.dart';
+import '../../../../core/constants/app_colors.dart';
+
+// ── Models ───────────────────────────────────────────────────────────────────
+
+class AiMode {
+  final IconData icon;
+  final String label;
+  final String hint;
+  const AiMode(this.icon, this.label, this.hint);
+}
+
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final String? modeLabel;
+  final Color? modeColor;
+  final DateTime timestamp;
+
+  const ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.modeLabel,
+    this.modeColor,
+    required this.timestamp,
+  });
+}
+
+// ── Lumi Chat Screen ─────────────────────────────────────────────────────────
+
+class LumiChatScreen extends StatefulWidget {
+  const LumiChatScreen({
+    super.key,
+    required this.initialMessage,
+    required this.initialModeIndex,
+  });
+
+  /// The first user message that triggered the chat.
+  final String initialMessage;
+
+  /// AI mode index at the moment the chat was opened (‑1 = general).
+  final int initialModeIndex;
+
+  @override
+  State<LumiChatScreen> createState() => _LumiChatScreenState();
+}
+
+class _LumiChatScreenState extends State<LumiChatScreen> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final ScrollController _scrollController = ScrollController();
+  final List<ChatMessage> _messages = [];
+  int _selectedAiMode = -1;
+
+  static const _aiModes = [
+    AiMode(Icons.document_scanner_outlined, 'OCR',       'Scan text from an image…'),
+    AiMode(Icons.mic_none_rounded,          'Speech',    'Describe what you want to transcribe…'),
+    AiMode(Icons.summarize_outlined,        'Summarize', 'Paste or select text to summarize…'),
+    AiMode(Icons.quiz_outlined,             'Questions', 'Generate questions from this material…'),
+    AiMode(Icons.school_outlined,           'Tutor',     'What would you like to learn?'),
+    AiMode(Icons.account_tree_outlined,     'Organize',  'Describe how to organize your notes…'),
+  ];
+
+  static const modeColors = [
+    Color(0xFFE67E22), // OCR
+    Color(0xFF7F77DD), // Speech
+    Color(0xFF5DCAA5), // Summarize
+    Color(0xFF3498DB), // Questions
+    Color(0xFFE74C8B), // Tutor
+    Color(0xFF2C2C2A), // Organize
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedAiMode = widget.initialModeIndex;
+
+    // Seed the conversation with the initial user message + AI reply.
+    final modeLabel =
+        widget.initialModeIndex >= 0 ? _aiModes[widget.initialModeIndex].label : null;
+    final modeColor =
+        widget.initialModeIndex >= 0 ? modeColors[widget.initialModeIndex] : null;
+
+    _messages.add(ChatMessage(
+      text: widget.initialMessage,
+      isUser: true,
+      modeLabel: modeLabel,
+      modeColor: modeColor,
+      timestamp: DateTime.now(),
+    ));
+    _messages.add(ChatMessage(
+      text: _getAiPlaceholderResponse(modeLabel),
+      isUser: false,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ── Helpers ──
+
+  String get _currentHint {
+    if (_selectedAiMode < 0) return 'Ask Lumi anything…';
+    return _aiModes[_selectedAiMode].hint;
+  }
+
+  String _getAiPlaceholderResponse(String? mode) {
+    return switch (mode) {
+      'OCR'       => 'Ready to scan! Please share an image and I\'ll extract the text for you.',
+      'Speech'    => 'Listening… Tap the mic to start recording your voice note.',
+      'Summarize' => 'I\'ll analyze the content and provide a concise summary. One moment…',
+      'Questions' => 'Generating thoughtful questions from your material…',
+      'Tutor'     => 'Let\'s learn together! I\'ll guide you step by step.',
+      'Organize'  => 'I\'ll help you structure and categorize your notes.',
+      _           => 'Let me think about that… I\'ll get back to you shortly!',
+    };
+  }
+
+  void _handleSend() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+
+    final modeLabel = _selectedAiMode >= 0 ? _aiModes[_selectedAiMode].label : null;
+    final modeColor = _selectedAiMode >= 0 ? modeColors[_selectedAiMode] : null;
+
+    setState(() {
+      _messages.add(ChatMessage(
+        text: text,
+        isUser: true,
+        modeLabel: modeLabel,
+        modeColor: modeColor,
+        timestamp: DateTime.now(),
+      ));
+      _messages.add(ChatMessage(
+        text: _getAiPlaceholderResponse(modeLabel),
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+    });
+
+    _controller.clear();
+    _focusNode.unfocus();
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  // ── Build ──
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Expanded(
+              child: ListView.separated(
+                controller: _scrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemCount: _messages.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (_, i) => _ChatBubble(message: _messages[i]),
+              ),
+            ),
+            _buildInputBar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Header ──
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 20, color: AppColors.textPrimary),
+          ),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.aiBadgeBg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.auto_awesome,
+                size: 18, color: AppColors.aiAccent),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lumi',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  'AI Assistant',
+                  style: TextStyle(fontSize: 11, color: AppColors.textHint),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              setState(() {
+                _messages.clear();
+              });
+            },
+            icon: const Icon(Icons.delete_outline_rounded,
+                size: 22, color: AppColors.textHint),
+            tooltip: 'Clear chat',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Input bar ──
+
+  Widget _buildInputBar() {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorder, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── AI mode chips ──
+          SizedBox(
+            height: 50,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: _aiModes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (_, i) {
+                final mode = _aiModes[i];
+                final isSelected = _selectedAiMode == i;
+                final color = modeColors[i];
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedAiMode = _selectedAiMode == i ? -1 : i;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeInOut,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? color.withOpacity(0.12)
+                          : AppColors.background,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? color : AppColors.divider,
+                        width: isSelected ? 1.2 : 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(mode.icon,
+                            size: 16,
+                            color: isSelected ? color : AppColors.textHint),
+                        const SizedBox(width: 5),
+                        Text(
+                          mode.label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color:
+                                isSelected ? color : AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          Container(
+            height: 0.5,
+            margin: const EdgeInsets.symmetric(horizontal: 14),
+            color: AppColors.divider,
+          ),
+
+          // ── Text field + send ──
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _handleSend(),
+                  style: const TextStyle(
+                      fontSize: 16, color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: _currentHint,
+                    hintStyle: const TextStyle(
+                        color: AppColors.textHint, fontSize: 15),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 10, bottom: 10),
+                child: GestureDetector(
+                  onTap: _handleSend,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _selectedAiMode >= 0
+                          ? modeColors[_selectedAiMode]
+                          : AppColors.textPrimary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_upward,
+                        color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Chat Bubble ──────────────────────────────────────────────────────────────
+
+class _ChatBubble extends StatelessWidget {
+  const _ChatBubble({required this.message});
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final isUser = message.isUser;
+    final time =
+        '${message.timestamp.hour.toString().padLeft(2, '0')}:'
+        '${message.timestamp.minute.toString().padLeft(2, '0')}';
+
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.78,
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isUser ? AppColors.textPrimary : AppColors.surface,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isUser ? 16 : 4),
+              bottomRight: Radius.circular(isUser ? 4 : 16),
+            ),
+            border: isUser
+                ? null
+                : Border.all(color: AppColors.cardBorder, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment:
+                isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              // Mode tag for user messages
+              if (isUser && message.modeLabel != null) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: (message.modeColor ?? AppColors.textHint)
+                        .withOpacity(0.25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    message.modeLabel!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+              // AI avatar for bot messages
+              if (!isUser) ...[
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: AppColors.aiBadgeBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(Icons.auto_awesome,
+                          size: 12, color: AppColors.aiAccent),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Lumi',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.aiAccent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+              ],
+              // Message text
+              Text(
+                message.text,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isUser ? Colors.white : AppColors.textPrimary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 4),
+              // Timestamp
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isUser
+                      ? Colors.white.withOpacity(0.5)
+                      : AppColors.textHint,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
