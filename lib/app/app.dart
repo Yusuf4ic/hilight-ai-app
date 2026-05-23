@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
-import '../features/home/presentation/screens/home_screen.dart';
+import '../features/onboarding/presentation/screens/onboarding_screen.dart';
 
 class HiLightApp extends StatelessWidget {
   const HiLightApp({super.key});
@@ -11,7 +11,7 @@ class HiLightApp extends StatelessWidget {
       title: 'HiLight',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const HomeScreen(),
+      home: const OnboardingScreen(),
     );
   }
 }
