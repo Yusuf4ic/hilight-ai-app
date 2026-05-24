@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_strings.dart';
 import '../../../../core/utils/page_transitions.dart';
@@ -29,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedAiMode = -1; // -1 = no mode selected (general ask)
   final TextEditingController _askController = TextEditingController();
   final FocusNode _askFocus = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   static const _aiModes = [
     AiMode(Icons.document_scanner_outlined, 'OCR', 'Scan text from an image…'),
@@ -47,7 +49,140 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _askController.dispose();
     _askFocus.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleScan() async {
+    // 1. Open device camera to take a photo
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+    
+    if (photo == null) {
+      // User canceled camera
+      return;
+    }
+
+    if (!mounted) return;
+
+    // 2. Show scanning/uploading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Processing image with AI...'),
+          ],
+        ),
+        duration: Duration(seconds: 40),
+        backgroundColor: Color(0xFFF5A623),
+      ),
+    );
+
+    // 3. Upload and scan
+    final result = await ref.read(notesProvider.notifier).scanText(imagePath: photo.path);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (result.success) {
+      // Switch to home tab and scroll to top
+      setState(() => _selectedIndex = 0);
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isMock
+                ? 'Scan complete (mock mode — no API key)'
+                : 'Text extracted successfully!',
+          ),
+          backgroundColor: const Color(0xFF5DCAA5),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scan failed: ${result.error}'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleDeviceScan() async {
+    // Show scanning indicator for ESP32
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Scanning text from ESP32-CAM...'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+        backgroundColor: Color(0xFFF5A623),
+      ),
+    );
+
+    final result = await ref.read(notesProvider.notifier).scanText();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (result.success) {
+      // Switch to home tab and scroll to top
+      setState(() => _selectedIndex = 0);
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isMock
+                ? 'Scan complete (mock mode — no API key)'
+                : 'Text extracted successfully!',
+          ),
+          backgroundColor: const Color(0xFF5DCAA5),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scan failed: ${result.error}'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   void _handleSend() {
@@ -117,7 +252,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
         onTap: (i) {
-          if (i == 2) return; // Action for Scan button
+          if (i == 2) {
+            _handleDeviceScan();
+            return;
+          }
           setState(() => _selectedIndex = i);
         },
       ),
@@ -151,6 +289,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ScaleFadeRoute(page: const CreateContentScreen()),
               );
             },
+            onPhoneScanPressed: _handleScan,
           ),
           Expanded(
             child: notesAsync.when(
@@ -244,7 +383,8 @@ class _HomeCardWithEdit extends StatelessWidget {
       children: [
         cardWidget,
         // Edit button — top-right corner
-        Positioned(
+        if (card.type != CardType.aiInsight)
+          Positioned(
           top: 8,
           right: 8,
           child: GestureDetector(
@@ -279,9 +419,13 @@ class _HomeCardWithEdit extends StatelessWidget {
 // ── Top Bar ──────────────────────────────────────────────────────────────────
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onAddPressed});
+  const _TopBar({
+    required this.onAddPressed,
+    required this.onPhoneScanPressed,
+  });
 
   final VoidCallback onAddPressed;
+  final VoidCallback onPhoneScanPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -302,6 +446,11 @@ class _TopBar extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          IconButton(
+            onPressed: onPhoneScanPressed,
+            icon: const Icon(Icons.camera_alt_outlined, size: 28, color: AppColors.textPrimary),
+          ),
+          const SizedBox(width: 16),
           IconButton(
             onPressed: onAddPressed,
             icon: const Icon(Icons.add, color: AppColors.textPrimary, size: 32),

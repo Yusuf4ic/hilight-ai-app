@@ -258,4 +258,5 @@ class S {
 
   // Version screen
   static String get readingCompanion => _t('HiLight — Your Reading Companion', 'HiLight — O\'qish Hamrohingiz');
+  static String get readMore => _t('Read conversation', 'Suhbatni o\'qish');
 }

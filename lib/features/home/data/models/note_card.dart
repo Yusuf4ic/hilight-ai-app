@@ -4,6 +4,7 @@ class NoteCard {
   final String id;
   final CardType type;
   final bool isHiddenFromHome;
+  final DateTime createdAt;
 
   // scannedQuote
   final String? quote;
@@ -23,7 +24,7 @@ class NoteCard {
   final String? manualTitle;
   final String? manualBody;
 
-  const NoteCard({
+  NoteCard({
     required this.id,
     required this.type,
     this.isHiddenFromHome = false,
@@ -37,7 +38,8 @@ class NoteCard {
     this.aiSummary,
     this.manualTitle,
     this.manualBody,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   NoteCard copyWith({
     String? id,
@@ -53,11 +55,13 @@ class NoteCard {
     String? aiSummary,
     String? manualTitle,
     String? manualBody,
+    DateTime? createdAt,
   }) {
     return NoteCard(
       id: id ?? this.id,
       type: type ?? this.type,
       isHiddenFromHome: isHiddenFromHome ?? this.isHiddenFromHome,
+      createdAt: createdAt ?? this.createdAt,
       quote: quote ?? this.quote,
       bookTitle: bookTitle ?? this.bookTitle,
       author: author ?? this.author,
@@ -76,6 +80,7 @@ class NoteCard {
       'id': id,
       'type': type.name,
       'isHiddenFromHome': isHiddenFromHome,
+      'createdAt': createdAt.toIso8601String(),
       'quote': quote,
       'bookTitle': bookTitle,
       'author': author,
@@ -94,6 +99,7 @@ class NoteCard {
       id: json['id'] as String,
       type: CardType.values.firstWhere((e) => e.name == json['type'], orElse: () => CardType.manualNote),
       isHiddenFromHome: json['isHiddenFromHome'] as bool? ?? false,
+      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
       quote: json['quote'] as String?,
       bookTitle: json['bookTitle'] as String?,
       author: json['author'] as String?,

@@ -75,17 +75,28 @@ class _ScanButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.textHint, width: 1),
-        ),
-        child: const Icon(
-          Icons.crop_free,
-          size: 20,
-          color: AppColors.textSecondary,
+      child: Transform.translate(
+        offset: const Offset(0, -6),
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.textPrimary, width: 2.5),
+            color: AppColors.background,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.crop_free,
+            size: 32,
+            color: AppColors.textPrimary,
+          ),
         ),
       ),
     );

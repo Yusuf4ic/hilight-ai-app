@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/l10n/app_strings.dart';
+import '../../data/models/note_card.dart';
+import '../providers/notes_provider.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -17,6 +21,7 @@ class ChatMessage {
   final String? modeLabel;
   final Color? modeColor;
   final DateTime timestamp;
+  final bool isTyping;
 
   const ChatMessage({
     required this.text,
@@ -24,34 +29,40 @@ class ChatMessage {
     this.modeLabel,
     this.modeColor,
     required this.timestamp,
+    this.isTyping = false,
   });
 }
 
 // ── Lumi Chat Screen ─────────────────────────────────────────────────────────
 
-class LumiChatScreen extends StatefulWidget {
+class LumiChatScreen extends ConsumerStatefulWidget {
   const LumiChatScreen({
     super.key,
-    required this.initialMessage,
-    required this.initialModeIndex,
+    this.initialMessage,
+    this.initialModeIndex = -1,
+    this.existingNote,
   });
 
   /// The first user message that triggered the chat.
-  final String initialMessage;
+  final String? initialMessage;
 
   /// AI mode index at the moment the chat was opened (‑1 = general).
   final int initialModeIndex;
 
+  /// The existing NoteCard if we are resuming an old chat.
+  final NoteCard? existingNote;
+
   @override
-  State<LumiChatScreen> createState() => _LumiChatScreenState();
+  ConsumerState<LumiChatScreen> createState() => _LumiChatScreenState();
 }
 
-class _LumiChatScreenState extends State<LumiChatScreen> {
+class _LumiChatScreenState extends ConsumerState<LumiChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
   int _selectedAiMode = -1;
+  String? _chatNoteId;
 
   static List<AiMode> get _aiModes => [
     AiMode(Icons.document_scanner_outlined, S.modeOcr,       S.hintOcr),
@@ -76,24 +87,45 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
     super.initState();
     _selectedAiMode = widget.initialModeIndex;
 
-    // Seed the conversation with the initial user message + AI reply.
-    final modeLabel =
-        widget.initialModeIndex >= 0 ? _aiModes[widget.initialModeIndex].label : null;
-    final modeColor =
-        widget.initialModeIndex >= 0 ? modeColors[widget.initialModeIndex] : null;
+    if (widget.existingNote != null) {
+      _chatNoteId = widget.existingNote!.id;
+      final historyRaw = widget.existingNote!.aiSummary ?? '';
+      if (historyRaw.isNotEmpty) {
+        final lines = historyRaw.split('\n');
+        for (final line in lines) {
+          final parts = line.split('|||');
+          if (parts.length >= 3) {
+            final isUser = parts[0] == 'You';
+            final text = parts[1];
+            final time = DateTime.tryParse(parts[2]) ?? DateTime.now();
+            _messages.add(ChatMessage(
+              text: text,
+              isUser: isUser,
+              timestamp: time,
+            ));
+          }
+        }
+      }
+    } else if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+      // Seed the conversation with the initial user message + process it
+      final modeLabel =
+          widget.initialModeIndex >= 0 ? _aiModes[widget.initialModeIndex].label : null;
+      final modeColor =
+          widget.initialModeIndex >= 0 ? modeColors[widget.initialModeIndex] : null;
 
-    _messages.add(ChatMessage(
-      text: widget.initialMessage,
-      isUser: true,
-      modeLabel: modeLabel,
-      modeColor: modeColor,
-      timestamp: DateTime.now(),
-    ));
-    _messages.add(ChatMessage(
-      text: _getAiPlaceholderResponse(modeLabel),
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
+      _messages.add(ChatMessage(
+        text: widget.initialMessage!,
+        isUser: true,
+        modeLabel: modeLabel,
+        modeColor: modeColor,
+        timestamp: DateTime.now(),
+      ));
+      
+      // Immediately start processing the first message
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _processMessage(widget.initialMessage!);
+      });
+    }
   }
 
   @override
@@ -111,25 +143,17 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
     return _aiModes[_selectedAiMode].hint;
   }
 
-  String _getAiPlaceholderResponse(String? mode) {
-    final modeLabel = mode;
-    if (modeLabel == S.modeOcr) return S.aiRespOcr;
-    if (modeLabel == S.modeSpeech) return S.aiRespSpeech;
-    if (modeLabel == S.modeSummarize) return S.aiRespSummarize;
-    if (modeLabel == S.modeQuestions) return S.aiRespQuestions;
-    if (modeLabel == S.modeTutor) return S.aiRespTutor;
-    if (modeLabel == S.modeOrganize) return S.aiRespOrganize;
-    return S.aiRespDefault;
-  }
+  bool _isProcessing = false;
 
-  void _handleSend() {
+  Future<void> _handleSend() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isProcessing) return;
 
     final modeLabel = _selectedAiMode >= 0 ? _aiModes[_selectedAiMode].label : null;
     final modeColor = _selectedAiMode >= 0 ? modeColors[_selectedAiMode] : null;
 
     setState(() {
+      _isProcessing = true;
       _messages.add(ChatMessage(
         text: text,
         isUser: true,
@@ -137,16 +161,115 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
         modeColor: modeColor,
         timestamp: DateTime.now(),
       ));
-      _messages.add(ChatMessage(
-        text: _getAiPlaceholderResponse(modeLabel),
-        isUser: false,
-        timestamp: DateTime.now(),
-      ));
     });
 
     _controller.clear();
     _focusNode.unfocus();
     _scrollToBottom();
+    
+    await _processMessage(text);
+  }
+
+  Future<void> _processMessage(String prompt) async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isProcessing = true;
+      _messages.add(ChatMessage(
+        text: '',
+        isUser: false,
+        timestamp: DateTime.now(),
+        isTyping: true,
+      ));
+    });
+    
+    _scrollToBottom();
+
+    try {
+      // Build history for backend
+      final history = _messages
+          .where((m) => !m.isTyping) // exclude the typing placeholder
+          .map((m) => {
+                'role': m.isUser ? 'user' : 'model',
+                'text': m.text,
+              })
+          .toList();
+
+      final scanService = ref.read(scanServiceProvider);
+      final responseText = await scanService.sendChatMessage(history);
+
+      if (!mounted) return;
+
+      setState(() {
+        _messages.removeLast(); // remove typing indicator
+        _messages.add(ChatMessage(
+          text: responseText,
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isProcessing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _messages.removeLast();
+        _messages.add(ChatMessage(
+          text: 'Error connecting to Gemini: $e',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isProcessing = false;
+      });
+    }
+
+    _updateChatNote();
+
+    _controller.clear();
+    _focusNode.unfocus();
+    _scrollToBottom();
+  }
+
+  void _updateChatNote() {
+    // Build the full dialogue (all messages including the first pair)
+    final fullBuffer = StringBuffer();
+    for (final m in _messages) {
+      if (m.isUser) {
+        fullBuffer.writeln('You|||${m.text}|||${m.timestamp.toIso8601String()}');
+      } else {
+        fullBuffer.writeln('Lumi|||${m.text}|||${m.timestamp.toIso8601String()}');
+      }
+    }
+
+    final fullLog = fullBuffer.toString().trim();
+    if (fullLog.isEmpty) return;
+
+    // Title = first user message (truncated to 60 chars)
+    final firstUserMsg = _messages.firstWhere(
+      (m) => m.isUser,
+      orElse: () => _messages.first,
+    );
+    final title = firstUserMsg.text.length > 60
+        ? '${firstUserMsg.text.substring(0, 60)}\u2026'
+        : firstUserMsg.text;
+
+    if (_chatNoteId == null) {
+      _chatNoteId = const Uuid().v4();
+      final card = NoteCard(
+        id: _chatNoteId!,
+        type: CardType.aiInsight,
+        manualTitle: title,
+        aiSummary: fullLog,
+      );
+      ref.read(notesProvider.notifier).addNote(card);
+    } else {
+      final card = NoteCard(
+        id: _chatNoteId!,
+        type: CardType.aiInsight,
+        manualTitle: title,
+        aiSummary: fullLog,
+      );
+      ref.read(notesProvider.notifier).updateNote(card);
+    }
   }
 
   void _scrollToBottom() {
@@ -239,6 +362,7 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
             onPressed: () {
               setState(() {
                 _messages.clear();
+                _chatNoteId = null;
               });
             },
             icon: const Icon(Icons.delete_outline_rounded,
@@ -485,14 +609,27 @@ class _ChatBubble extends StatelessWidget {
                 const SizedBox(height: 6),
               ],
               // Message text
-              Text(
-                message.text,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isUser ? Colors.white : AppColors.textPrimary,
-                  height: 1.45,
+              if (message.isTyping)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 4),
+                  child: SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.aiAccent,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  message.text,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isUser ? Colors.white : AppColors.textPrimary,
+                    height: 1.45,
+                  ),
                 ),
-              ),
               const SizedBox(height: 4),
               // Timestamp
               Text(

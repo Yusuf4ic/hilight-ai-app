@@ -20,6 +20,11 @@ class ManualNoteCard extends StatelessWidget {
             children: [
               _NoteBadge(),
               const Spacer(),
+              Text(
+                '${card.createdAt.day.toString().padLeft(2, '0')}.${card.createdAt.month.toString().padLeft(2, '0')}.${card.createdAt.year} ${card.createdAt.hour.toString().padLeft(2, '0')}:${card.createdAt.minute.toString().padLeft(2, '0')}',
+                style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+              const SizedBox(width: 8),
               const Icon(Icons.more_horiz, size: 20, color: AppColors.textHint),
             ],
           ),
