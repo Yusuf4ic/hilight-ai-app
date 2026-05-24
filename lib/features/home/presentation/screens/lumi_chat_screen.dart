@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 
@@ -52,13 +53,13 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
   final List<ChatMessage> _messages = [];
   int _selectedAiMode = -1;
 
-  static const _aiModes = [
-    AiMode(Icons.document_scanner_outlined, 'OCR',       'Scan text from an image…'),
-    AiMode(Icons.mic_none_rounded,          'Speech',    'Describe what you want to transcribe…'),
-    AiMode(Icons.summarize_outlined,        'Summarize', 'Paste or select text to summarize…'),
-    AiMode(Icons.quiz_outlined,             'Questions', 'Generate questions from this material…'),
-    AiMode(Icons.school_outlined,           'Tutor',     'What would you like to learn?'),
-    AiMode(Icons.account_tree_outlined,     'Organize',  'Describe how to organize your notes…'),
+  static List<AiMode> get _aiModes => [
+    AiMode(Icons.document_scanner_outlined, S.modeOcr,       S.hintOcr),
+    AiMode(Icons.mic_none_rounded,          S.modeSpeech,    S.hintSpeech),
+    AiMode(Icons.summarize_outlined,        S.modeSummarize, S.hintSummarize),
+    AiMode(Icons.quiz_outlined,             S.modeQuestions, S.hintQuestions),
+    AiMode(Icons.school_outlined,           S.modeTutor,     S.hintTutor),
+    AiMode(Icons.account_tree_outlined,     S.modeOrganize,  S.hintOrganize),
   ];
 
   static const modeColors = [
@@ -106,20 +107,19 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
   // ── Helpers ──
 
   String get _currentHint {
-    if (_selectedAiMode < 0) return 'Ask Lumi anything…';
+    if (_selectedAiMode < 0) return S.askLumiAnything;
     return _aiModes[_selectedAiMode].hint;
   }
 
   String _getAiPlaceholderResponse(String? mode) {
-    return switch (mode) {
-      'OCR'       => 'Ready to scan! Please share an image and I\'ll extract the text for you.',
-      'Speech'    => 'Listening… Tap the mic to start recording your voice note.',
-      'Summarize' => 'I\'ll analyze the content and provide a concise summary. One moment…',
-      'Questions' => 'Generating thoughtful questions from your material…',
-      'Tutor'     => 'Let\'s learn together! I\'ll guide you step by step.',
-      'Organize'  => 'I\'ll help you structure and categorize your notes.',
-      _           => 'Let me think about that… I\'ll get back to you shortly!',
-    };
+    final modeLabel = mode;
+    if (modeLabel == S.modeOcr) return S.aiRespOcr;
+    if (modeLabel == S.modeSpeech) return S.aiRespSpeech;
+    if (modeLabel == S.modeSummarize) return S.aiRespSummarize;
+    if (modeLabel == S.modeQuestions) return S.aiRespQuestions;
+    if (modeLabel == S.modeTutor) return S.aiRespTutor;
+    if (modeLabel == S.modeOrganize) return S.aiRespOrganize;
+    return S.aiRespDefault;
   }
 
   void _handleSend() {
@@ -243,7 +243,7 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
             },
             icon: const Icon(Icons.delete_outline_rounded,
                 size: 22, color: AppColors.textHint),
-            tooltip: 'Clear chat',
+            tooltip: S.clearChat,
           ),
         ],
       ),
@@ -261,6 +261,7 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
         border: Border.all(color: AppColors.cardBorder, width: 0.5),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.06),
             blurRadius: 12,
             offset: const Offset(0, -3),
@@ -295,6 +296,7 @@ class _LumiChatScreenState extends State<LumiChatScreen> {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: isSelected
+                          // ignore: deprecated_member_use
                           ? color.withOpacity(0.12)
                           : AppColors.background,
                       borderRadius: BorderRadius.circular(20),
@@ -421,6 +423,7 @@ class _ChatBubble extends StatelessWidget {
                 : Border.all(color: AppColors.cardBorder, width: 0.5),
             boxShadow: [
               BoxShadow(
+                // ignore: deprecated_member_use
                 color: Colors.black.withOpacity(0.04),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
@@ -439,6 +442,7 @@ class _ChatBubble extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 6),
                   decoration: BoxDecoration(
                     color: (message.modeColor ?? AppColors.textHint)
+                        // ignore: deprecated_member_use
                         .withOpacity(0.25),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -496,6 +500,7 @@ class _ChatBubble extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10,
                   color: isUser
+                      // ignore: deprecated_member_use
                       ? Colors.white.withOpacity(0.5)
                       : AppColors.textHint,
                 ),

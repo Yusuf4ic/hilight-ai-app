@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -33,38 +34,35 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   static const _hintColor = Color(0xFF888780);
 
   // ── Page data ──
-  static const _pages = [
+  static List<_OnboardingPage> get _pages => [
     _OnboardingPage(
-      title: 'Welcome to\nHiLight',
-      subtitle: 'Your AI-powered reading companion',
-      description:
-          'Transform how you read, learn, and organize knowledge with the help of artificial intelligence.',
-      orbs: [
-        _OrbData(0.20, 0.18, 190, Color(0xFFF5A623), Color(0xFFFFD88A)),
-        _OrbData(0.72, 0.30, 150, Color(0xFF5DCAA5), Color(0xFFB2F0DB)),
-        _OrbData(0.45, 0.58, 110, Color(0xFF7F77DD), Color(0xFFCBC6F5)),
+      title: S.onboardTitle1,
+      subtitle: S.onboardSub1,
+      description: S.onboardDesc1,
+      orbs: const [
+        _OrbData(0.20, 0.18, 190, Color.fromARGB(255, 153, 118, 62), Color(0xFFFFD88A)),
+        _OrbData(0.72, 0.30, 150, Color.fromARGB(255, 176, 203, 77), Color(0xFFB2F0DB)),
+        _OrbData(0.45, 0.58, 110, Color.fromARGB(255, 54, 50, 101), Color.fromARGB(255, 144, 136, 221)),
       ],
     ),
     _OnboardingPage(
-      title: 'Meet Lumi\nYour AI Tutor',
-      subtitle: 'Scan • Listen • Summarize • Learn',
-      description:
-          'OCR scanning, voice notes, AI summaries, quiz generation — all powered by Lumi, your personal study assistant.',
-      orbs: [
+      title: S.onboardTitle2,
+      subtitle: S.onboardSub2,
+      description: S.onboardDesc2,
+      orbs: const [
         _OrbData(0.28, 0.22, 170, Color(0xFF7F77DD), Color(0xFFD4CFFF)),
         _OrbData(0.68, 0.42, 140, Color(0xFFE74C8B), Color(0xFFFFB8D4)),
         _OrbData(0.15, 0.60, 120, Color(0xFF3498DB), Color(0xFFACDAFF)),
       ],
     ),
     _OnboardingPage(
-      title: 'Start Your\nJourney',
-      subtitle: 'Knowledge at your fingertips',
-      description:
-          'Highlight what matters, let AI organize the rest. Your learning journey begins now.',
-      orbs: [
-        _OrbData(0.32, 0.25, 180, Color(0xFF5DCAA5), Color(0xFFA8F0D5)),
-        _OrbData(0.75, 0.18, 130, Color(0xFFF5A623), Color(0xFFFFE0A0)),
-        _OrbData(0.50, 0.52, 160, Color(0xFFFF6B6B), Color(0xFFFFBFBF)),
+      title: S.onboardTitle3,
+      subtitle: S.onboardSub3,
+      description: S.onboardDesc3,
+      orbs: const [
+        _OrbData(0.32, 0.25, 180, Color.fromARGB(255, 5, 68, 47), Color(0xFFA8F0D5)),
+        _OrbData(0.75, 0.18, 130, Color.fromARGB(255, 126, 85, 19), Color(0xFFFFE0A0)),
+        _OrbData(0.50, 0.52, 160, Color.fromARGB(255, 84, 21, 21), Color(0xFFFFBFBF)),
       ],
     ),
   ];
@@ -82,7 +80,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     _orbController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 16),
     )..repeat();
 
     _fadeController = AnimationController(
@@ -164,12 +162,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: _currentPage < _pages.length - 1
                         ? TextButton(
                             onPressed: _onGetStarted,
-                            child: const Text(
-                              'Skip',
+                            child: Text(
+                              S.skip,
                               style: TextStyle(
                                 color: _hintColor,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           )
@@ -385,7 +383,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: active
                       ? _textColor
-                      : AppColors.divider,
+                      : const Color.fromARGB(255, 202, 183, 84),
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
@@ -431,7 +429,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                 ),
                 child: Text(
-                  isLast ? 'Get Started' : 'Continue',
+                  isLast ? S.getStarted : S.continueBtn,
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w600,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/l10n/app_strings.dart';
 
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
@@ -11,16 +12,16 @@ class AppBottomNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
-  static const _items = [
-    (Icons.home_outlined,      Icons.home,        'Home'),
-    (Icons.menu_book_outlined, Icons.menu_book,   'Library'),
-    (null,                     null,              ''),
-    (Icons.lightbulb_outline,  Icons.lightbulb,   'Insights'),
-    (Icons.person_outline,     Icons.person,      'Profile'),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final items = [
+      (Icons.home_outlined,      Icons.home,        S.navHome),
+      (Icons.menu_book_outlined, Icons.menu_book,   S.navLibrary),
+      (null,                     null,              ''),
+      (Icons.lightbulb_outline,  Icons.lightbulb,   S.navInsights),
+      (Icons.person_outline,     Icons.person,      S.navProfile),
+    ];
+
     return Container(
       height: 84,
       decoration: const BoxDecoration(
@@ -31,12 +32,12 @@ class AppBottomNavBar extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(_items.length, (i) {
+        children: List.generate(items.length, (i) {
           if (i == 2) {
             return _ScanButton(onTap: () => onTap(i));
           }
           final selected = selectedIndex == i;
-          final (outline, filled, label) = _items[i];
+          final (outline, filled, label) = items[i];
           return GestureDetector(
             onTap: () => onTap(i),
             child: Column(

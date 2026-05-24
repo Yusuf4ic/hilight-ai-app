@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../data/models/note_card.dart';
 import 'card_shell.dart';
 import 'waveform_bar.dart';
@@ -42,8 +43,8 @@ class _VoiceNoteCardState extends State<VoiceNoteCard>
         children: [
           Row(
             children: [
-              const Text(
-                'Voice Note',
+              Text(
+                S.voiceNote,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

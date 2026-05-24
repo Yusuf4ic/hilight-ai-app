@@ -4,41 +4,43 @@ import '../../../../core/l10n/app_strings.dart';
 import '../../data/models/note_card.dart';
 import 'card_shell.dart';
 
-class AiInsightCard extends StatelessWidget {
-  const AiInsightCard({super.key, required this.card});
+class ManualNoteCard extends StatelessWidget {
+  const ManualNoteCard({super.key, required this.card});
 
   final NoteCard card;
 
   @override
   Widget build(BuildContext context) {
     return CardShell(
-      accentColor: AppColors.aiAccent,
+      accentColor: const Color(0xFF64B5F6), // Light blue accent for manual notes
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _AiBadge(),
+              _NoteBadge(),
               const Spacer(),
               const Icon(Icons.more_horiz, size: 20, color: AppColors.textHint),
             ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            S.summary,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+          const SizedBox(height: 12),
+          if (card.manualTitle != null && card.manualTitle!.isNotEmpty) ...[
+            Text(
+              card.manualTitle!,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
+            const SizedBox(height: 6),
+          ],
           Text(
-            card.aiSummary ?? '',
+            card.manualBody ?? '',
             style: const TextStyle(
               fontSize: 14,
               color: AppColors.textSecondary,
-              height: 1.5,
+              height: 1.45,
             ),
           ),
         ],
@@ -47,26 +49,26 @@ class AiInsightCard extends StatelessWidget {
   }
 }
 
-class _AiBadge extends StatelessWidget {
+class _NoteBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.aiBadgeBg,
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFFE3F2FD),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome, size: 12, color: AppColors.aiBadgeFg),
+          const Icon(Icons.edit_note, size: 14, color: Color(0xFF1976D2)),
           const SizedBox(width: 4),
           Text(
-            S.aiInsight,
+            S.manualNote,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.aiBadgeFg,
+              color: Color(0xFF1976D2),
             ),
           ),
         ],

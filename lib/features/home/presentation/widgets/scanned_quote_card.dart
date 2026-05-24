@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../data/models/note_card.dart';
 import 'card_shell.dart';
 
@@ -77,8 +78,8 @@ class _Badge extends StatelessWidget {
         color: AppColors.quoteBadgeBg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const Text(
-        'Scanned Quote',
+      child: Text(
+        S.scannedQuote,
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
