@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 import '../../data/models/note_card.dart';
 import 'card_shell.dart';
 import 'waveform_bar.dart';
@@ -42,8 +43,8 @@ class _VoiceNoteCardState extends State<VoiceNoteCard>
         children: [
           Row(
             children: [
-              const Text(
-                'Voice Note',
+              Text(
+                S.voiceNote,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -52,12 +53,18 @@ class _VoiceNoteCardState extends State<VoiceNoteCard>
               ),
               const Spacer(),
               Text(
+                '${widget.card.createdAt.day.toString().padLeft(2, '0')}.${widget.card.createdAt.month.toString().padLeft(2, '0')}.${widget.card.createdAt.year} ${widget.card.createdAt.hour.toString().padLeft(2, '0')}:${widget.card.createdAt.minute.toString().padLeft(2, '0')} • ',
+                style: const TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+              Text(
                 widget.card.voiceTime ?? '',
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textHint,
                 ),
               ),
+              const SizedBox(width: 8),
+              const Icon(Icons.more_horiz, size: 20, color: AppColors.textHint),
             ],
           ),
           const SizedBox(height: 12),

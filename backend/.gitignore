@@ -1,0 +1,18 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+.venv/
+env/
+venv/
+
+# Captured images (local only, don't commit)
+captures/
+
+# IDE
+.vscode/
+.idea/
+*.swp

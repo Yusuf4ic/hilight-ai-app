@@ -9,7 +9,7 @@ class NotesRepositoryImpl implements NotesRepository {
   Future<List<NoteCard>> getNotes() async {
     // В будущем: запрос к API или локальной БД (Hive / Isar)
     await Future.delayed(const Duration(milliseconds: 300));
-    return const [
+    return [
       NoteCard(
         id: '1',
         type: CardType.scannedQuote,

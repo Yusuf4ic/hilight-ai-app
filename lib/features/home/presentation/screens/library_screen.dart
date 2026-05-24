@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/l10n/app_strings.dart';
 
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({super.key});
@@ -35,10 +36,10 @@ class LibraryScreen extends StatelessWidget {
   }
 
   Widget _buildTopBar() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Text(
-        'Library',
+        S.library,
         style: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.w700,
@@ -58,13 +59,13 @@ class LibraryScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.divider, width: 0.5),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          SizedBox(width: 12),
-          Icon(Icons.search, size: 18, color: AppColors.textHint),
-          SizedBox(width: 8),
+          const SizedBox(width: 12),
+          const Icon(Icons.search, size: 18, color: AppColors.textHint),
+          const SizedBox(width: 8),
           Text(
-            'Search books...',
+            S.searchBooks,
             style: TextStyle(fontSize: 14, color: AppColors.textHint),
           ),
         ],
@@ -97,6 +98,7 @@ class _BookTile extends StatelessWidget {
         border: Border.all(color: AppColors.cardBorder, width: 0.5),
         boxShadow: [
           BoxShadow(
+            // ignore: deprecated_member_use
             color: Colors.black.withOpacity(0.03),
             blurRadius: 6,
             offset: const Offset(0, 2),
@@ -110,6 +112,7 @@ class _BookTile extends StatelessWidget {
             width: 48,
             height: 64,
             decoration: BoxDecoration(
+              // ignore: deprecated_member_use
               color: Color(book.color).withOpacity(0.15),
               borderRadius: BorderRadius.circular(6),
               border: Border(

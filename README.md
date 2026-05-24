@@ -1,16 +1,81 @@
-# edtech
+# HiLight — Smart Educational AI Companion ✨
 
-A new Flutter project.
+**HiLight** — это умное образовательное приложение, объединяющее мобильный интерфейс на Flutter с мощным Python-бекендом и нейросетью Google Gemini. Приложение позволяет сканировать конспекты, книги и документы, извлекать текст с помощью ИИ, сохранять инсайты и общаться с умным ассистентом Lumi.
 
-## Getting Started
+## 🌟 Основной функционал
 
-This project is a starting point for a Flutter application.
+*   📸 **Два режима сканирования**:
+    *   Сканирование через **камеру смартфона** (прямая загрузка фото на сервер).
+    *   Сканирование через внешнюю плату **ESP32-CAM** (аппаратная интеграция для "умного маркера").
+*   🧠 **Google Gemini 2.5 Flash**: Используется для извлечения текста (OCR), понимания контекста, генерации заголовков и суммаризации.
+*   💬 **ИИ-ассистент Lumi**: Полноценный чат с ИИ, который помнит контекст ваших предыдущих сообщений и помогает с учебой.
+*   🗂 **Хранение знаний**: Сохранение отсканированных цитат, голосовых заметок, диалогов с ИИ и ручных записей.
+*   🔄 **Riverpod**: Современное управление состояниями во Flutter для плавного UI.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🏗 Архитектура проекта
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Проект разделен на две основные части:
+
+1.  **Frontend (Flutter)**: Находится в корневой папке. Отвечает за красивый UI, локальное хранение данных (SharedPreferences) и взаимодействие с сервером.
+2.  **Backend (Python/Flask)**: Находится в папке `backend/`. Отвечает за прием запросов, связь с аппаратной камерой ESP32-CAM и перенаправление данных в Google AI Studio (Gemini).
+
+---
+
+## 🚀 Установка и запуск
+
+### 1. Настройка Python Бекенда
+
+Серверу нужен ключ от API Google Gemini, чтобы обрабатывать фотографии и отвечать в чате.
+
+1. Перейдите в папку бекенда:
+   ```bash
+   cd backend
+   ```
+2. Установите зависимости:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Создайте файл `.env` в папке `backend` (можно скопировать из `.env.example`) и добавьте ваш ключ:
+   ```env
+   # backend/.env
+   ESP32_CAM_IP=172.20.10.2
+   GEMINI_API_KEY=ваш_ключ_от_google_ai_studio
+   ```
+4. Запустите сервер:
+   ```bash
+   python app.py
+   ```
+   *Сервер будет доступен по адресу `http://0.0.0.0:5000`*
+
+### 2. Запуск Flutter Приложения
+
+1. Убедитесь, что ваш телефон и компьютер (где запущен Python) **подключены к одной Wi-Fi сети**.
+2. Узнайте локальный IP-адрес вашего компьютера (например, `172.20.10.3`).
+3. Откройте файл `lib/core/constants/api_config.dart` и обновите `baseUrl`:
+   ```dart
+   static const String baseUrl = 'http://172.20.10.3:5000'; // Замените на ваш IP
+   ```
+4. Установите Flutter пакеты и запустите приложение:
+   ```bash
+   flutter pub get
+   flutter run
+   ```
+
+---
+
+## 📡 API Эндпоинты (Backend)
+
+*   `POST /api/scan-upload` — принимает картинку в формате `multipart/form-data`, отправляет в Gemini и возвращает распознанный текст.
+*   `POST /api/scan` — дает команду плате ESP32-CAM сделать фото, скачивает его и отправляет в Gemini.
+*   `POST /api/chat` — принимает массив истории сообщений `{"messages": [...]}` и возвращает ответ от ИИ с учетом контекста.
+*   `GET /api/health` — проверка статуса сервера.
+
+---
+
+## 🛠 Стек технологий
+
+*   **Mobile**: Flutter, Dart, Riverpod, Image Picker.
+*   **Backend**: Python, Flask, Flask-CORS, Google GenAI SDK (`google-genai`).
+*   **Hardware**: ESP32-CAM (настроенная на отдачу JPEG-снимков по HTTP-запросу `/capture`).
