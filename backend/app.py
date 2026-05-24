@@ -218,8 +218,8 @@ def home():
 def scan_text():
     """Called by Flutter app scan button (ESP32 path) or temp HTML UI."""
     result = _run_scan_pipeline()
-    status_code = 200 if result.get("success") else 500
-    return jsonify(result), status_code
+    # Always return 200 so Flutter can read the error message properly
+    return jsonify(result), 200
 
 
 @app.route('/api/scan-upload', methods=['POST'])
