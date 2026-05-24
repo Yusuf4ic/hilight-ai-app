@@ -24,6 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _selectedAiMode = -1; // -1 = no mode selected (general ask)
   final TextEditingController _askController = TextEditingController();
   final FocusNode _askFocus = FocusNode();
+  final ScrollController _scrollController = ScrollController();
 
   static const _aiModes = [
     AiMode(Icons.document_scanner_outlined, 'OCR',       'Scan text from an image…'),
@@ -38,7 +39,66 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void dispose() {
     _askController.dispose();
     _askFocus.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleScan() async {
+    // Show scanning indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18, height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Scanning text from ESP32-CAM...'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+        backgroundColor: Color(0xFFF5A623),
+      ),
+    );
+
+    final result = await ref.read(notesProvider.notifier).scanText();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    if (result.success) {
+      // Switch to home tab and scroll to top
+      setState(() => _selectedIndex = 0);
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.isMock
+                ? 'Scan complete (mock mode — no API key)'
+                : 'Text extracted successfully!',
+          ),
+          backgroundColor: const Color(0xFF5DCAA5),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scan failed: ${result.error}'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   void _handleSend() {
@@ -100,7 +160,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: AppBottomNavBar(
         selectedIndex: _selectedIndex,
         onTap: (i) {
-          if (i == 2) return; // Action for Scan button
+          if (i == 2) {
+            _handleScan();
+            return;
+          }
           setState(() => _selectedIndex = i);
         },
       ),
@@ -118,6 +181,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (notes) => ListView(
+                controller: _scrollController,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
